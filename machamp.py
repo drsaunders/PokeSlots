@@ -8,12 +8,25 @@ from multi_armed_bandit.solvers import Solver, EpsilonGreedy, UCB1, BayesianUCB,
 def prob_str(probas):
     return " ".join(["%.1f%%" % (p*100) for p in probas])
 
-def plot_beta(a,b):
+def plot_beta(a,b,jitter=None):
     x = np.linspace(stats.beta.ppf(0.01, a, b),
-                stats.beta.ppf(0.99, a, b), 100)
+                    stats.beta.ppf(0.99, a, b), 100)
     
-    plt.plot(x, stats.beta.pdf(x, a, b),'-', lw=5, alpha=0.6, label='beta pdf')
-    plt.xlabel("Estimated reward probabilities")
+    y = stats.beta.pdf(x, a, b)
+    if jitter is not None:
+    	x = x + np.random.normal(len(x)) * jitter
+
+    plt.plot(x, y, '-', lw=5, alpha=0.6, label='beta pdf')
+    plt.xlabel("Reward probability")
+    plt.yticks([])
+
+
+def plot_betas(solver, jitter=None):
+    plt.figure(figsize=(10,6))
+    for a,b in zip(solver._as, solver._bs):
+        plot_beta(a, b, jitter)
+    plt.legend(np.arange(len(solver._as))+1,loc='center left',title="Machine", fontsize=10)
+
 
 def plot_credible_intervals(the_as, the_bs, alpha):
     intervals = []
@@ -26,11 +39,11 @@ def plot_credible_intervals(the_as, the_bs, alpha):
         bottoms.append(bottom)
         intervals.append(interval)
     plt.figure(figsize=(10,6))
-    plt.bar(np.arange(len(the_as))+1,height=intervals, bottom=bottoms)
+    plt.bar(np.arange(len(the_as))+1,height=intervals, bottom=bottoms, alpha=0.6)
     a = plt.xticks(np.arange(19)+1)
     plt.ylim([0,1])
     plt.xlabel("Machine")
-    plt.ylabel("Payout probability estimate")
+    plt.ylabel("Reward probability")
 
 def topslots(solver, topn=10):
     probas = solver.estimated_probas
@@ -44,12 +57,6 @@ def topslots(solver, topn=10):
 def print_history(hist):
     for h in hist:
         print("{} {}".format(h[0],h[1]))
-
-def plot_betas(solver):
-    plt.figure(figsize=(10,6))
-    for a,b in zip(solver._as, solver._bs):
-        plot_beta(a,b)
-    plt.legend(np.arange(len(solver._as))+1,loc='center left',fontsize=10)
 
 class ThompsonSamplingCGC(ThompsonSampling):
     def __init__(self, init_a=1, init_b=1, num_slots=5):
